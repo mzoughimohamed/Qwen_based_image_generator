@@ -4,6 +4,7 @@ import pytest
 from PIL import Image
 
 from app import config
+from app.backends import space
 from app.backends.base import BackendError
 from app.backends.space import SPACE_API_NAME, SpaceBackend, build_space_args, friendly_space_error
 from app.schemas import build_request
@@ -113,3 +114,21 @@ def test_seed_at_space_max_is_accepted(tmp_path):
     result = make(client).run(req(seed=2**31 - 1), lambda *e: None)
     assert client.calls
     assert result.seed == 2**31 - 1
+
+
+def test_default_client_passes_token_not_hf_token(monkeypatch):
+    monkeypatch.setenv("HF_TOKEN", "secret-token")
+    captured = {}
+
+    class FakeGradioClient:
+        def __init__(self, src, **kwargs):
+            captured["src"] = src
+            captured.update(kwargs)
+
+    monkeypatch.setattr("gradio_client.Client", FakeGradioClient)
+
+    space._default_client()
+
+    assert captured["src"] == config.SPACE_ID
+    assert captured["token"] == "secret-token"
+    assert "hf_token" not in captured

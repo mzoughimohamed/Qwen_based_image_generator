@@ -67,7 +67,7 @@ def _result_path(value) -> str:
 def _default_client():
     from gradio_client import Client
 
-    return Client(config.SPACE_ID, hf_token=os.environ.get("HF_TOKEN") or None)
+    return Client(config.SPACE_ID, token=os.environ.get("HF_TOKEN") or None)
 
 
 class SpaceBackend:
