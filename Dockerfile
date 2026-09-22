@@ -10,10 +10,13 @@ RUN apt-get update \
 
 WORKDIR /app
 
-RUN pip install torch==2.11.0 torchvision==0.26.0 --index-url https://download.pytorch.org/whl/cu128
+RUN pip install torch==2.11.0 --index-url https://download.pytorch.org/whl/cu128
 
 COPY requirements.txt .
 RUN pip install -r requirements.txt
+
+# Separate layer so the cached torch/requirements layers above are reused.
+RUN pip install --timeout 120 --retries 10 torchvision==0.26.0 --index-url https://download.pytorch.org/whl/cu128
 
 COPY app ./app
 COPY static ./static
