@@ -69,6 +69,21 @@ def test_list_history_newest_first(tmp_path):
     assert [m["id"] for m in s.list_history()] == list(reversed(ids))
 
 
+def test_list_history_skips_unreadable_files(tmp_path):
+    s = make(tmp_path)
+    good_id = s.save(JobRequest(backend="local", prompt="ok"), result(), 0)["id"]
+    (s.root / "garbage.json").write_text("not json{{{", encoding="utf-8")
+    (s.root / "empty.json").write_text("{}", encoding="utf-8")
+    assert [m["id"] for m in s.list_history()] == [good_id]
+
+
+def test_save_leaves_no_tmp_files(tmp_path):
+    s = make(tmp_path)
+    s.save(JobRequest(backend="local", prompt="p"), result(), 0)
+    assert list(s.root.glob("*.tmp")) == []
+    assert list(s.root.glob("*.json.tmp")) == []
+
+
 def test_delete_removes_all_files(tmp_path):
     s = make(tmp_path)
     req = JobRequest(backend="local", prompt="p", images=[Image.new("RGB", (4, 4))])

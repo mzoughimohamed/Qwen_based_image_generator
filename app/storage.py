@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import secrets
 from datetime import datetime
@@ -65,7 +66,10 @@ class Storage:
             "duration_s": round(duration_s, 1),
             "created_at": now.isoformat(timespec="microseconds"),
         }
-        (self.root / f"{rid}.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+        final_path = self.root / f"{rid}.json"
+        tmp_path = self.root / f"{rid}.json.tmp"
+        tmp_path.write_text(json.dumps(meta, indent=2), encoding="utf-8")
+        os.replace(tmp_path, final_path)
         return meta
 
     def get(self, rid: str) -> dict | None:
@@ -77,7 +81,15 @@ class Storage:
         return json.loads(path.read_text(encoding="utf-8"))
 
     def list_history(self) -> list[dict]:
-        metas = [json.loads(p.read_text(encoding="utf-8")) for p in self.root.glob("*.json")]
+        metas = []
+        for p in self.root.glob("*.json"):
+            try:
+                meta = json.loads(p.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            if not isinstance(meta, dict) or "id" not in meta or "created_at" not in meta:
+                continue
+            metas.append(meta)
         return sorted(metas, key=lambda m: (m["created_at"], m["id"]), reverse=True)
 
     def load_image(self, rid: str) -> Image.Image | None:

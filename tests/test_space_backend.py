@@ -56,6 +56,25 @@ class FakeClient:
         return self.job
 
 
+class NeverDoneJob:
+    """A job that never completes, to exercise the timeout path."""
+
+    def __init__(self):
+        self.cancelled = False
+
+    def done(self):
+        return False
+
+    def status(self):
+        return SimpleNamespace(rank=None)
+
+    def cancel(self):
+        self.cancelled = True
+
+    def result(self):  # pragma: no cover - never reached
+        raise AssertionError("result() should not be called after a timeout")
+
+
 def output_png(tmp_path, mode="RGBA"):
     path = tmp_path / "out.png"
     Image.new(mode, (40, 20)).save(path)
@@ -92,6 +111,14 @@ def test_run_encodes_input_images(tmp_path):
     assert result.rewritten_prompt is None
 
 
+def test_non_enhanced_job_ignores_echoed_prompt(tmp_path):
+    # The Space may echo the original prompt back in the "rewritten" slot even
+    # when enhance was never requested; that must not surface as a rewrite.
+    client = FakeClient(FakeJob((output_png(tmp_path), 1, "a cat")))
+    result = make(client).run(req(enhance=False), lambda *e: None)
+    assert result.rewritten_prompt is None
+
+
 def test_quota_error_is_friendly():
     client = FakeClient(submit_error=Exception("You have exceeded your GPU quota (60s left)"))
     with pytest.raises(BackendError, match="quota"):
@@ -114,6 +141,37 @@ def test_seed_at_space_max_is_accepted(tmp_path):
     result = make(client).run(req(seed=2**31 - 1), lambda *e: None)
     assert client.calls
     assert result.seed == 2**31 - 1
+
+
+def test_reconnects_after_submit_failure(tmp_path):
+    good_client = FakeClient(FakeJob((output_png(tmp_path), 1, "")))
+    clients = [FakeClient(submit_error=Exception("boom")), good_client]
+    factory = mock_factory(clients)
+
+    backend = SpaceBackend(client_factory=factory, poll_interval=0)
+    with pytest.raises(BackendError):
+        backend.run(req(), lambda *e: None)
+
+    backend.run(req(), lambda *e: None)
+    assert factory.calls == 2
+
+
+def mock_factory(clients):
+    def factory():
+        factory.calls += 1
+        return clients[factory.calls - 1]
+
+    factory.calls = 0
+    return factory
+
+
+def test_timeout_cancels_job_and_raises_backend_error():
+    job = NeverDoneJob()
+    client = FakeClient(job)
+    backend = SpaceBackend(client_factory=lambda: client, poll_interval=0, timeout_s=0.05)
+    with pytest.raises(BackendError, match="did not respond"):
+        backend.run(req(), lambda *e: None)
+    assert job.cancelled is True
 
 
 def test_default_client_passes_token_not_hf_token(monkeypatch):

@@ -16,7 +16,8 @@ from tests.fakes import FakeBackend
 def ctx(tmp_path):
     backends = {"local": FakeBackend("local"), "space": FakeBackend("space")}
     app = create_app(backends=backends, storage=Storage(tmp_path))
-    return SimpleNamespace(client=TestClient(app), app=app, backends=backends)
+    client = TestClient(app, base_url="http://127.0.0.1")
+    return SimpleNamespace(client=client, app=app, backends=backends)
 
 
 def png(size=(32, 32), mode="RGB"):
@@ -97,6 +98,13 @@ def test_rejects_oversize(ctx, monkeypatch):
     assert r.status_code == 400
 
 
+def test_rejects_decompression_bomb(ctx, monkeypatch):
+    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 1000)
+    files = [("images", ("a.png", png((128, 128)), "image/png"))]
+    r = ctx.client.post("/api/jobs", data={"backend": "local", "prompt": "p"}, files=files)
+    assert r.status_code == 400
+
+
 def test_backend_not_ready_is_503(ctx):
     ctx.backends["local"].state = "loading"
     r = ctx.client.post("/api/jobs", data={"backend": "local", "prompt": "p"})
@@ -124,3 +132,13 @@ def test_index_is_served(ctx):
     r = ctx.client.get("/")
     assert r.status_code == 200
     assert "Qwen-Image" in r.text
+
+
+def test_untrusted_host_is_rejected(ctx):
+    r = ctx.client.get("/", headers={"Host": "evil.example"})
+    assert r.status_code == 400
+
+
+def test_trusted_host_still_works(ctx):
+    r = ctx.client.get("/", headers={"Host": "127.0.0.1"})
+    assert r.status_code == 200

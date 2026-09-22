@@ -15,6 +15,7 @@ const state = {
   history: [],
   filters: { mode: "all", backend: "all" },
   detail: null,
+  checkedInitialLocalState: false,
 };
 
 // ---------- helpers ----------
@@ -160,6 +161,15 @@ async function refreshHealth() {
     const s = state.health[name];
     $(`#dot-${name}`).className = `dot ${s ? s.state : ""}`;
     $(`#dot-${name}`).title = s ? `${s.state}: ${s.detail}` : "unreachable";
+  }
+  if (!state.checkedInitialLocalState) {
+    state.checkedInitialLocalState = true;
+    const local = state.health.local;
+    if (local && local.state === "disabled" && backend() === "local") {
+      $('input[name="backend"][value="space"]').checked = true;
+      onBackendChange();
+      return;
+    }
   }
   const s = state.health[backend()];
   const banner = $("#banner");
@@ -376,7 +386,12 @@ function openDetail(meta) {
 async function deleteDetail() {
   const meta = state.detail;
   if (!meta || !confirm("Delete this image?")) return;
-  await api(`/api/history/${meta.id}`, { method: "DELETE" });
+  try {
+    await api(`/api/history/${meta.id}`, { method: "DELETE" });
+  } catch (err) {
+    alert(err.message);
+    return;
+  }
   $("#detail").close();
   loadHistory();
 }

@@ -21,6 +21,7 @@ MAX_SEED = 2**32 - 1
 CUSTOM_MIN, CUSTOM_MAX = 256, 2688
 DEFAULT_T2I_SIZE = (2048, 2048)
 ENHANCER_MAX_NEW_TOKENS = 4096
+SPACE_TIMEOUT_S = 900
 
 # (aspect label, width, height), matching the official Space presets.
 SIZE_PRESETS = {

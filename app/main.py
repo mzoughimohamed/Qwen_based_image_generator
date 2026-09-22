@@ -6,6 +6,7 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 from PIL import Image, UnidentifiedImageError
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app import config
 from app.jobs import JobQueue
@@ -31,17 +32,25 @@ async def _read_upload(upload: UploadFile) -> Image.Image:
     try:
         img = Image.open(io.BytesIO(data))
         img.load()
-    except (UnidentifiedImageError, OSError):
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError):
         raise ValidationError(f"'{upload.filename}' is not a valid image") from None
     return normalize_image(img)
 
 
-def create_app(backends: dict | None = None, storage: Storage | None = None) -> FastAPI:
+def create_app(
+    backends: dict | None = None,
+    storage: Storage | None = None,
+    allowed_hosts: list[str] | None = None,
+) -> FastAPI:
     backends = backends if backends is not None else default_backends()
     storage = storage or Storage(config.OUTPUTS_DIR)
     jobs = JobQueue(backends, storage)
 
     app = FastAPI(title="Qwen-Image Studio")
+    app.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=allowed_hosts if allowed_hosts is not None else ["127.0.0.1", "localhost"],
+    )
     app.state.jobs = jobs
     app.state.storage = storage
 

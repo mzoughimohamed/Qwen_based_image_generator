@@ -27,6 +27,8 @@ python -m uv pip install --python .venv -r requirements.txt
 - The first local run downloads about 14 GB of weights. The prompt enhancers are about 18 GB each and download on first use.
 - `$env:QWEN_DISABLE_LOCAL = "1"` runs with the HF Space backend only.
 - `$env:HF_TOKEN = "hf_..."` gives a larger Space quota and access to gated downloads.
+- If the model download fails with 401/gated, run `.\.venv\Scripts\huggingface-cli.exe login` (or set `HF_TOKEN`).
+- If the model doesn't fit on your GPU, it falls back to CPU offload automatically (slower); the Local GPU dot's tooltip shows which.
 
 Results are saved in `outputs/`, one PNG and one JSON file per image.
 

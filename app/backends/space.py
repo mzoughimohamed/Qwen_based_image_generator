@@ -73,10 +73,11 @@ def _default_client():
 class SpaceBackend:
     name = "space"
 
-    def __init__(self, client_factory=None, poll_interval: float = 1.0):
+    def __init__(self, client_factory=None, poll_interval: float = 1.0, timeout_s: float = None):
         self._client_factory = client_factory or _default_client
         self._client = None
         self._poll_interval = poll_interval
+        self._timeout_s = config.SPACE_TIMEOUT_S if timeout_s is None else timeout_s
 
     def status(self) -> dict:
         return {"state": "ready", "detail": f"Remote: huggingface.co/spaces/{config.SPACE_ID}"}
@@ -99,7 +100,17 @@ class SpaceBackend:
                 job = self._client.submit(
                     *build_space_args(req, prompt, encode_images(paths)), api_name=SPACE_API_NAME
                 )
+                deadline = time.monotonic() + self._timeout_s
                 while not job.done():
+                    if time.monotonic() > deadline:
+                        try:
+                            job.cancel()
+                        except Exception:  # noqa: BLE001 - cancellation is best-effort
+                            pass
+                        raise BackendError(
+                            f"HF Space did not respond within {self._timeout_s / 60:.0f} "
+                            "minutes; try again later or use Local."
+                        )
                     rank = getattr(job.status(), "rank", None)
                     on_progress("remote-queue", rank + 1 if isinstance(rank, int) else None, None)
                     time.sleep(self._poll_interval)
@@ -107,6 +118,11 @@ class SpaceBackend:
                 with Image.open(_result_path(image_out)) as im:
                     im.load()
                     image = im.copy()
+            except BackendError:
+                raise
             except Exception as e:  # noqa: BLE001 - every remote failure becomes a user message
+                self._client = None
                 raise BackendError(friendly_space_error(e)) from e
-        return JobResult(image=image, seed=int(seed), rewritten_prompt=rewritten or None)
+        return JobResult(
+            image=image, seed=int(seed), rewritten_prompt=rewritten if (req.enhance and rewritten) else None
+        )
