@@ -90,18 +90,23 @@ class JobQueue:
             job.status = "running"
 
         def on_progress(phase, step, total):
-            job.phase, job.step, job.total_steps = phase, step, total
+            with self._lock:
+                job.phase, job.step, job.total_steps = phase, step, total
 
         started = time.monotonic()
         try:
             result = self._backends[job.backend].run(job.request, on_progress)
             meta = self._storage.save(job.request, result, time.monotonic() - started)
-            job.result, job.result_id = meta, meta["id"]
-            job.rewritten_prompt, job.warning = result.rewritten_prompt, result.warning
-            job.status = "done"
+            with self._lock:
+                job.result, job.result_id = meta, meta["id"]
+                job.rewritten_prompt, job.warning = result.rewritten_prompt, result.warning
+                job.status = "done"
         except BackendError as e:
-            job.error, job.status = str(e), "error"
+            with self._lock:
+                job.error, job.status = str(e), "error"
         except Exception as e:  # noqa: BLE001 - surface anything to the UI
-            job.error, job.status = f"{type(e).__name__}: {e}", "error"
+            with self._lock:
+                job.error, job.status = f"{type(e).__name__}: {e}", "error"
         finally:
-            job.request = None  # free input images
+            with self._lock:
+                job.request = None  # free input images

@@ -72,3 +72,18 @@ def test_unknown_backend_rejected(tmp_path):
 
 def test_unknown_job_snapshot_is_none(tmp_path):
     assert make_queue(tmp_path, local=FakeBackend()).snapshot("missing") is None
+
+
+def test_snapshot_consistency_while_running(tmp_path):
+    gate = threading.Event()
+    fake = FakeBackend("local", gate=gate)
+    q = make_queue(tmp_path, local=fake)
+    job = q.submit(build_request(backend="local", prompt="test"))
+    assert fake.started.wait(5)
+    # Poll snapshot while running; must not observe torn update
+    snap = q.snapshot(job.id)
+    assert snap["status"] == "running"
+    gate.set()
+    q.wait_idle()
+    snap = q.snapshot(job.id)
+    assert snap["status"] == "done"
