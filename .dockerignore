@@ -1,0 +1,9 @@
+.venv
+.git
+.superpowers
+outputs
+docs
+tests
+__pycache__
+.pytest_cache
+server.log

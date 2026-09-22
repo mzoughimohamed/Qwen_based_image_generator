@@ -1,0 +1,43 @@
+name: qwen-image-studio
+
+services:
+  model-download:
+    build: .
+    image: qwen-image-studio:latest
+    command: ["python", "-m", "app.download_models"]
+    environment:
+      - HF_TOKEN
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+    restart: "no"
+
+  app:
+    build: .
+    image: qwen-image-studio:latest
+    depends_on:
+      model-download:
+        condition: service_completed_successfully
+    environment:
+      - HF_TOKEN
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - hf-cache:/root/.cache/huggingface
+      - ./outputs:/app/outputs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+volumes:
+  hf-cache:

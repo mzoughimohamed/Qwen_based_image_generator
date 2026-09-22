@@ -1,0 +1,11 @@
+diffusers @ git+https://github.com/huggingface/diffusers
+transformers>=5.17
+accelerate
+huggingface_hub
+gradio_client
+fastapi
+uvicorn[standard]
+python-multipart
+pillow
+pytest
+httpx
