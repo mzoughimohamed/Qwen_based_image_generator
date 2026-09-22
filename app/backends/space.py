@@ -17,6 +17,9 @@ _UNUSED_SIZE = (2688, 1536)  # sent when custom_size is False; the Space ignores
 # view_api()); we pass it through unchanged rather than an empty string so
 # behavior matches the official UI's default.
 _LOG_DIR = "./generation_logs_paper_case"
+# The Space's "Seed" slider caps at 2^31 - 1 (confirmed via view_api()), lower
+# than config.MAX_SEED (2^32 - 1) shared with the local backend.
+SPACE_MAX_SEED = 2**31 - 1
 
 
 def encode_images(paths: list[str]):
@@ -79,6 +82,10 @@ class SpaceBackend:
         return {"state": "ready", "detail": f"Remote: huggingface.co/spaces/{config.SPACE_ID}"}
 
     def run(self, req: JobRequest, on_progress: ProgressFn) -> JobResult:
+        if req.seed is not None and req.seed > SPACE_MAX_SEED:
+            raise BackendError(
+                f"HF Space accepts seeds up to {SPACE_MAX_SEED}; use a smaller seed or the Local backend."
+            )
         prompt = f"{req.prompt} {config.RGBA_PHRASE}" if req.transparent else req.prompt
         with tempfile.TemporaryDirectory() as tmp:
             paths = []

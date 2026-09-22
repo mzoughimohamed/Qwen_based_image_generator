@@ -99,3 +99,17 @@ def test_quota_error_is_friendly():
 
 def test_friendly_error_generic():
     assert friendly_space_error(Exception("boom")) == "HF Space error: boom"
+
+
+def test_seed_over_space_max_is_rejected_before_network(tmp_path):
+    client = FakeClient(FakeJob((output_png(tmp_path), 2**31, "")))
+    with pytest.raises(BackendError, match="seeds up to"):
+        make(client).run(req(seed=2**31), lambda *e: None)
+    assert client.calls == []
+
+
+def test_seed_at_space_max_is_accepted(tmp_path):
+    client = FakeClient(FakeJob((output_png(tmp_path), 2**31 - 1, "")))
+    result = make(client).run(req(seed=2**31 - 1), lambda *e: None)
+    assert client.calls
+    assert result.seed == 2**31 - 1
