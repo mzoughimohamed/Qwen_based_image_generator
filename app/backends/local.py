@@ -15,7 +15,7 @@ from app.schemas import JobRequest, JobResult, resolve_local_size
 def load_pipeline(offload: bool):
     from diffusers import QwenImage21Pipeline
 
-    pipe = QwenImage21Pipeline.from_pretrained(config.MODEL_ID, torch_dtype=torch.bfloat16)
+    pipe = QwenImage21Pipeline.from_pretrained(config.MODEL_ID, dtype=torch.bfloat16)
     if offload:
         pipe.enable_model_cpu_offload()
     else:

@@ -14,7 +14,7 @@ Each job runs on your own GPU or on the official Hugging Face Space.
 ```powershell
 python -m pip install --user uv
 python -m uv venv --python 3.12 .venv
-python -m uv pip install --python .venv torch --index-url https://download.pytorch.org/whl/cu128
+python -m uv pip install --python .venv torch torchvision --index-url https://download.pytorch.org/whl/cu128
 python -m uv pip install --python .venv -r requirements.txt
 ```
 
