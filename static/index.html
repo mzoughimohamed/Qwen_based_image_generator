@@ -1,3 +1,142 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>Qwen-Image Studio</title></head>
-<body><h1>Qwen-Image Studio</h1></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Qwen-Image Studio</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body data-mode="generate" data-backend="local">
+  <header class="topbar">
+    <h1>Qwen-Image <span>2.1</span></h1>
+    <nav class="tabs">
+      <button class="tab active" data-tab="generate">Generate</button>
+      <button class="tab" data-tab="edit">Edit</button>
+      <button class="tab" data-tab="gallery">Gallery</button>
+    </nav>
+    <div class="backend-switch" role="radiogroup" aria-label="Backend">
+      <label><input type="radio" name="backend" value="local" checked> Local GPU <span class="dot" id="dot-local"></span></label>
+      <label><input type="radio" name="backend" value="space"> HF Space <span class="dot" id="dot-space"></span></label>
+    </div>
+  </header>
+
+  <div id="banner" class="banner hidden"></div>
+
+  <main>
+    <section id="panel-create" class="create">
+      <form id="job-form" class="controls" autocomplete="off">
+        <div class="edit-only">
+          <div id="dropzone" class="dropzone">
+            Drop up to 10 images here or <button type="button" id="pick" class="link">browse</button>
+            <input type="file" id="file-input" accept="image/*" multiple hidden>
+          </div>
+          <ul id="thumbs" class="thumbs"></ul>
+        </div>
+
+        <label class="field"><span id="prompt-label">Prompt</span>
+          <textarea id="prompt" rows="5" placeholder="A cozy cabin in a snowy forest at dusk, warm light in the windows"></textarea>
+        </label>
+
+        <div class="row wrap">
+          <label class="toggle"><input type="checkbox" id="enhance"> Enhance prompt</label>
+          <label class="toggle"><input type="checkbox" id="transparent"> Transparent background</label>
+        </div>
+
+        <details><summary>Negative prompt</summary>
+          <textarea id="negative" rows="2" placeholder="blurry, low quality"></textarea>
+        </details>
+
+        <div class="field"><span>Size</span>
+          <div class="seg" id="tier">
+            <button type="button" data-tier="auto">Auto</button>
+            <button type="button" data-tier="2K">2K</button>
+            <button type="button" data-tier="1K">1K</button>
+            <button type="button" data-tier="custom">Custom</button>
+          </div>
+          <div class="seg" id="ratios"></div>
+          <div id="custom-size" class="row hidden">
+            <input type="number" id="cw" min="256" max="2688" step="16" value="2048"> ×
+            <input type="number" id="ch" min="256" max="2688" step="16" value="2048">
+          </div>
+        </div>
+
+        <div class="row">
+          <label class="field local-only"><span>Steps</span>
+            <input type="number" id="steps" min="1" max="100" value="40">
+          </label>
+          <label class="field grow"><span>Seed</span>
+            <span class="row"><input type="number" id="seed" min="0" placeholder="random">
+            <button type="button" id="dice" title="Random seed">🎲</button></span>
+          </label>
+        </div>
+
+        <button type="submit" id="submit" class="primary">Generate</button>
+        <p class="hint">Ctrl+Enter to submit</p>
+      </form>
+
+      <div class="result">
+        <div id="progress" class="progress hidden">
+          <div class="bar"><div id="bar-fill"></div></div>
+          <span id="progress-text"></span>
+        </div>
+        <div id="error" class="error hidden"></div>
+        <div id="warning" class="warning hidden"></div>
+        <div id="result-empty" class="empty">Your image will appear here.</div>
+        <figure id="result-figure" class="hidden">
+          <div id="result-inputs" class="thumbs small"></div>
+          <div id="result-frame" class="frame"><img id="result-img" alt="Result"></div>
+          <figcaption>
+            <div id="rewritten" class="rewritten hidden">
+              <strong>Enhanced prompt</strong>
+              <p id="rewritten-text"></p>
+              <button type="button" id="use-rewritten">Use as my prompt</button>
+            </div>
+            <div class="actions">
+              <a id="download" class="btn" download>Download</a>
+              <button type="button" id="reuse">Reuse settings</button>
+              <button type="button" id="edit-this">Edit this image</button>
+              <button type="button" id="copy-seed">Copy seed</button>
+            </div>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="panel-gallery" class="gallery hidden">
+      <div class="filters">
+        <div class="seg" id="filter-mode">
+          <button data-v="all" class="active">All</button>
+          <button data-v="generate">Generated</button>
+          <button data-v="edit">Edited</button>
+        </div>
+        <div class="seg" id="filter-backend">
+          <button data-v="all" class="active">All</button>
+          <button data-v="local">Local</button>
+          <button data-v="space">Space</button>
+        </div>
+      </div>
+      <div id="grid" class="grid"></div>
+      <p id="grid-empty" class="empty hidden">Nothing here yet.</p>
+    </section>
+  </main>
+
+  <dialog id="detail">
+    <div class="detail-body">
+      <div id="detail-frame" class="frame"><img id="detail-img" alt=""></div>
+      <div class="detail-meta">
+        <div id="detail-inputs" class="thumbs small"></div>
+        <dl id="detail-dl"></dl>
+        <div class="actions">
+          <button type="button" id="d-reuse">Reuse</button>
+          <button type="button" id="d-edit">Edit this</button>
+          <a id="d-download" class="btn" download>Download</a>
+          <button type="button" id="d-delete" class="danger">Delete</button>
+          <button type="button" id="d-close">Close</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
