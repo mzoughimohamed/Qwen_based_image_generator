@@ -35,3 +35,19 @@ Results are saved in `outputs/`, one PNG and one JSON file per image.
 ```powershell
 .\.venv\Scripts\python.exe -m pytest -q
 ```
+
+## Docker
+
+This setup needs Docker Desktop with NVIDIA GPU support. Build and start everything with:
+
+```powershell
+docker compose up -d --build
+docker compose logs -f model-download   # first run: downloads ~50 GB (image model + both enhancers)
+```
+
+- The `model-download` service pre-fetches `Qwen/Qwen-Image-2.1`, `Qwen/Qwen-Image-2.1-PE-T2I` and `Qwen/Qwen-Image-2.1-PE-I2I` into the `hf-cache` volume, then exits.
+- `app` starts only after the download succeeds. It then serves http://127.0.0.1:8000.
+- Later `up` runs skip files that are already downloaded.
+- Results appear in `./outputs`.
+- To pass a Hugging Face token, set `HF_TOKEN` in your shell or in a `.env` file next to `docker-compose.yml`.
+- `docker compose down` stops the stack and keeps the downloaded models. `docker compose down -v` also deletes them.
