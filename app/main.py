@@ -14,10 +14,12 @@ from app.storage import Storage
 
 
 def default_backends() -> dict:
+    import os
+
     from app.backends.local import LocalBackend
     from app.backends.space import SpaceBackend
 
-    local = LocalBackend()
+    local = LocalBackend(enabled=os.environ.get("QWEN_DISABLE_LOCAL") != "1")
     local.start()
     return {"local": local, "space": SpaceBackend()}
 
