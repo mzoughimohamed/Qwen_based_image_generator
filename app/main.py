@@ -20,7 +20,10 @@ def default_backends() -> dict:
     from app.backends.local import LocalBackend
     from app.backends.space import SpaceBackend
 
-    local = LocalBackend(enabled=os.environ.get("QWEN_DISABLE_LOCAL") != "1")
+    local = LocalBackend(
+        enabled=os.environ.get("QWEN_DISABLE_LOCAL") != "1",
+        force_offload=os.environ.get("QWEN_FORCE_OFFLOAD") == "1",
+    )
     local.start()
     return {"local": local, "space": SpaceBackend()}
 

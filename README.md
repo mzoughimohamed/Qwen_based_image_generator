@@ -75,6 +75,7 @@ python -m uv pip install --python .venv -r requirements.txt
 - **Environment variables:**
   - `$env:QWEN_DISABLE_LOCAL = "1"` skips loading the local model, so only the HF Space backend is used.
   - `$env:HF_TOKEN = "hf_..."` uses your Hugging Face token for downloads and the Space.
+  - `$env:QWEN_FORCE_OFFLOAD = "1"` loads the model in CPU-offload mode from the start. See Performance.
 
 ## Using the app
 
@@ -162,6 +163,36 @@ Environment variables:
 |---|---|
 | `HF_TOKEN` | Hugging Face token, used for downloads and the Space |
 | `QWEN_DISABLE_LOCAL=1` | Don't load the local model; use the HF Space only. Applies to non-Docker runs |
+| `QWEN_FORCE_OFFLOAD=1` | Load the model in CPU-offload mode from the start. See Performance |
+
+## Performance
+
+By default the whole model is placed on the GPU. It needs about 31.7 GB, so on a 32 GB card it
+fills 98% of the memory and leaves almost nothing for each step's working memory, which then
+spills to system RAM and slows everything down.
+
+CPU offload keeps only the part of the model that is currently running on the GPU. On an
+RTX 5000 Ada (32 GB) that is far faster, measured with the same prompt, size, steps and seed:
+
+| Mode | 1024x1024, 8 steps | VRAM used |
+|---|---|---|
+| GPU-resident (default) | 151.6 s | 32.2 GB |
+| **CPU offload** | **35.8 s** | 2.8 GB |
+
+With CPU offload, 2688x1536 takes about 6.5 s per step, so a 40-step 2K image takes roughly
+4-5 minutes.
+
+To turn it on:
+
+```powershell
+# Docker: put this in .env next to docker-compose.yml
+QWEN_FORCE_OFFLOAD=1
+
+# Without Docker
+$env:QWEN_FORCE_OFFLOAD = "1"; .un.ps1
+```
+
+Cards with much more memory than the model needs are likely to be faster without it.
 
 ## Troubleshooting
 

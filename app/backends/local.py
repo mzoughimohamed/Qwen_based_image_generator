@@ -27,10 +27,11 @@ class LocalBackend:
     name = "local"
 
     def __init__(self, loader=load_pipeline, enhancer=None, device: str = "cuda",
-                 enabled: bool = True):
+                 enabled: bool = True, force_offload: bool = False):
         self._loader = loader
         self._enhancer = enhancer
         self._device = device
+        self._force_offload = force_offload
         self._pipe = None
         self._accepts_negative = False
         self._lock = threading.Lock()
@@ -46,12 +47,16 @@ class LocalBackend:
 
     def load(self) -> None:
         try:
-            try:
-                pipe = self._loader(offload=False)
-            except torch.OutOfMemoryError:
-                free_cuda()
+            if self._force_offload:
                 pipe = self._loader(offload=True)
                 self.offload = True
+            else:
+                try:
+                    pipe = self._loader(offload=False)
+                except torch.OutOfMemoryError:
+                    free_cuda()
+                    pipe = self._loader(offload=True)
+                    self.offload = True
             self._pipe = pipe
             self._accepts_negative = "negative_prompt" in inspect.signature(pipe.__call__).parameters
             self._state = "ready"

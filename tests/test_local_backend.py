@@ -176,3 +176,17 @@ def test_run_when_not_ready():
     backend = LocalBackend(loader=lambda offload: FakePipe(), device="cpu")
     with pytest.raises(BackendError):
         run(backend, req(steps=1))
+
+
+def test_force_offload_loads_in_offload_mode():
+    pipe = FakePipe()
+    calls = []
+
+    def loader(offload):
+        calls.append(offload)
+        return pipe
+
+    backend = LocalBackend(loader=loader, device="cpu", force_offload=True)
+    backend.load()
+    assert calls == [True]
+    assert backend.status() == {"state": "ready", "detail": "Loaded with CPU offload", "offload": True}
