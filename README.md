@@ -21,7 +21,7 @@ The server listens on **127.0.0.1 only** and has no login. It's meant for one pe
 
 ## Requirements
 
-- An NVIDIA GPU. 32 GB of VRAM holds the image model fully on the GPU. Smaller cards fall back to CPU offload automatically, which is slower.
+- An NVIDIA GPU. The model needs about 31.7 GB to sit fully on the card; smaller cards fall back to CPU offload automatically. On a 32 GB card, CPU offload is in fact much faster, so read Performance before your first run.
 - About **75 GB of free disk** for the models:
 
   | Model | Size | Used for |
@@ -90,7 +90,7 @@ python -m uv pip install --python .venv -r requirements.txt
   3. The size defaults to **Auto**, which matches the first image's aspect ratio.
 - **Transparent background:** outputs an RGBA PNG. Combine it with Edit and an instruction like *"Extract the person"* to cut a subject out of a photo.
 - **Enhance prompt:** rewrites your prompt first and shows the result under the image. **Use as my prompt** copies it into the prompt box.
-  - With the Local backend, the first use loads a 9B model, and from then on the image model runs in CPU-offload mode, which is slower.
+  - With the Local backend, the first use loads a 9B model, and from then on the image model runs in CPU-offload mode.
   - With the HF Space backend, the enhancement happens on the Space's side.
 - **Result actions:**
   - **Download**
@@ -189,7 +189,8 @@ To turn it on:
 QWEN_FORCE_OFFLOAD=1
 
 # Without Docker
-$env:QWEN_FORCE_OFFLOAD = "1"; .un.ps1
+$env:QWEN_FORCE_OFFLOAD = "1"; .
+un.ps1
 ```
 
 Cards with much more memory than the model needs are likely to be faster without it.
